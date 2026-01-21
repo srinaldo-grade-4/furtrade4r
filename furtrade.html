@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fur Trade Adventure</title>
+    
+    <!-- Tailwind CSS (Styling) -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    
+    <style>
+        .fade-in { animation: fadeIn 0.5s ease-in; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+    </style>
+</head>
+<body class="bg-amber-50 min-h-screen font-sans text-slate-800">
+
+    <!-- APP CONTAINER -->
+    <div id="app" class="min-h-screen flex flex-col items-center justify-center p-4">
+        <!-- Content injects here via JavaScript -->
+    </div>
+
+    <!-- JAVASCRIPT LOGIC -->
+    <script>
+        // --- DATA ---
+        const ROLES = {
+            voyageur: {
+                title: "The Voyageur",
+                icon: "anchor",
+                description: "Paddle the great rivers, carry heavy packs, and transport furs across the continent.",
+                color: "bg-blue-600",
+                textColor: "text-blue-900",
+                bgLight: "bg-blue-50",
+                border: "border-blue-200"
+            },
+            trader: {
+                title: "HBC Factor",
+                icon: "package",
+                description: "Manage the trading post, inspect furs, and barter goods with Indigenous partners.",
+                color: "bg-red-700",
+                textColor: "text-red-900",
+                bgLight: "bg-red-50",
+                border: "border-red-200"
+            },
+            trapper: {
+                title: "First Nations Trapper",
+                icon: "feather",
+                description: "Knowledge of the land, trapping beaver, and negotiating fair trades for your community.",
+                color: "bg-emerald-600",
+                textColor: "text-emerald-900",
+                bgLight: "bg-emerald-50",
+                border: "border-emerald-200"
+            }
+        };
+
+        const STORY_DATA = {
+            voyageur: {
+                1: { text: "You are departing Montreal in a 36-foot birchbark canoe. Your brigade leader yells 'En Avant!' The canoe is heavy with trade goods. How do you keep the rhythm?", options: [{ text: "Sing a paddling song like 'Alouette'.", nextId: 2, feedback: "Correct! Songs helped voyageurs paddle in unison for 14+ hours a day." }, { text: "Count loudly: 'One, two, three!'", nextId: 2, feedback: "Not quite. Voyageurs used spirited songs to keep the rhythm and morale high." }] },
+                2: { text: "You encounter the 'Grand Rapids'. The water is churning violently. A wrong move means a destroyed canoe.", options: [{ text: "Risk it! Shoot the rapids to save time.", nextId: 'fail', feedback: "Disaster! Your birchbark canoe hits a rock and shatters. The goods are lost." }, { text: "Portage (carry) the canoe and goods over land.", nextId: 3, feedback: "Smart choice. Portaging was grueling work (carrying 90lb packs!), but it saved the cargo." }] },
+                3: { text: "Night falls. You are exhausted. What is for dinner?", options: [{ text: "Rubaboo (Pemmican stew)", nextId: 'packing_minigame', feedback: "Delicious! Pemmican (dried meat and berries) was the high-energy fuel of the fur trade." }, { text: "Fresh salad and roast chicken", nextId: 'packing_minigame', feedback: "Impossible. Voyageurs ate shelf-stable foods like dried peas, pork, or pemmican." }] }
+            },
+            trader: {
+                1: { text: "You are the Chief Factor at York Factory. A group of Cree trappers arrives with prime beaver pelts. What is your first move?", options: [{ text: "Invite the trading captain inside to smoke a pipe.", nextId: 2, feedback: "Correct. The 'Smoking of the Pipe' was a crucial ceremony to build trust and respect before business." }, { text: "Immediately demand to see the furs.", nextId: 2, feedback: "That's rude! Skipping the ceremony insults your trading partners and might cost you the trade." }] },
+                2: { text: "The ceremony is done. It's time to trade. You need to use the Standard of Trade. What currency do you use?", options: [{ text: "Gold Coins", nextId: 'trading_minigame', feedback: "No. Gold wasn't used. The currency was the 'Made Beaver' (MB) token." }, { text: "Made Beaver (MB) Tokens", nextId: 'trading_minigame', feedback: "Exactly. The value of all goods was measured in prime beaver pelts." }] },
+                3: { text: "The trade is complete. The furs need to be prepared for the ship to London. What do you do?", options: [{ text: "Press them into 90lb bales.", nextId: 'success', feedback: "Correct. Compact bales saved space on the ships and were easier to transport." }, { text: "Throw them loosely into the hold.", nextId: 'success', feedback: "Inefficient! Loose furs could rot or take up too much space." }] }
+            },
+            trapper: {
+                1: { text: "Winter is coming. The beaver pelts are thickest and most valuable now. Where do you set your trap line?", options: [{ text: "Near the beaver lodge entrance under the ice.", nextId: 2, feedback: "Good strategy. This is where beavers are most active in winter." }, { text: "In the middle of the open field.", nextId: 2, feedback: "Unlikely to catch anything there. Beavers stick close to water and their lodges." }] },
+                2: { text: "You have collected 10 prime beaver pelts. You travel to the trading post. You want a new musket. A musket costs 12 Made Beaver.", options: [{ text: "Trade all 10 pelts for the musket.", nextId: 3, feedback: "You don't have enough! You need 2 more pelts (or equivalent value) to afford the musket." }, { text: "Trade 10 pelts for blankets and a kettle instead.", nextId: 3, feedback: "Wise choice. You can afford these items (approx 5-6 MB total) and save the rest." }] },
+                3: { text: "The traders want you to bring more fox furs next year. But fox is sacred to your clan this season.", options: [{ text: "Refuse the request politely.", nextId: 'success', feedback: "Important choice. Indigenous peoples were partners, not employees, and made decisions based on their own culture and needs." }, { text: "Agree immediately.", nextId: 'success', feedback: "Remember, you have agency. You don't have to follow the trader's orders if it conflicts with your values." }] }
+            }
+        };
+
+        const TRADING_ITEMS = [
+            { name: "Metal Kettle", cost: 1, img: "🫖" },
+            { name: "Wool Blanket", cost: 4, img: "🧣" },
+            { name: "Musket", cost: 12, img: "🔫" },
+            { name: "Steel Axe", cost: 2, img: "🪓" }
+        ];
+
+        // --- STATE ---
+        let state = {
+            screen: 'start',
+            role: null,
+            nodeId: 1,
+            score: 0,
+            feedback: null,
+            tradingCart: [],
+            packingItems: []
+        };
+
+        // --- RENDER FUNCTIONS ---
+        const app = document.getElementById('app');
+
+        function render() {
+            app.innerHTML = ''; // Clear app
+
+            if (state.screen === 'start') renderStart();
+            else if (state.screen === 'role_select') renderRoleSelect();
+            else if (state.screen === 'game') renderGame();
+            else if (state.screen === 'trading_minigame') renderTrading();
+            else if (state.screen === 'packing_minigame') renderPacking();
+            else if (state.screen === 'summary') renderSummary();
+
+            // Initialize Icons
+            lucide.createIcons();
+        }
+
+        function renderStart() {
+            app.innerHTML = `
+                <div class="max-w-2xl text-center space-y-8 fade-in">
+                    <div class="flex justify-center mb-6">
+                        <div class="bg-amber-900 p-4 rounded-full">
+                            <i data-lucide="map" class="w-16 h-16 text-amber-100"></i>
+                        </div>
+                    </div>
+                    <h1 class="text-5xl font-extrabold text-amber-900 tracking-tight">The Fur Trade Adventure</h1>
+                    <p class="text-xl text-amber-800/80">Travel back to 1800. Step into the boots of those who built the trade routes of Canada.</p>
+                    <button onclick="setScreen('role_select')" class="px-8 py-4 bg-amber-700 hover:bg-amber-800 text-white text-xl font-bold rounded-xl shadow-lg transform transition hover:scale-105">
+                        Start Your Journey
+                    </button>
+                </div>
+            `;
+        }
+
+        function renderRoleSelect() {
+            let rolesHtml = '';
+            for (const [key, role] of Object.entries(ROLES)) {
+                rolesHtml += `
+                    <button onclick="selectRole('${key}')" class="flex flex-col items-center p-8 rounded-2xl shadow-md border-4 border-transparent hover:border-amber-400 transition bg-white group">
+                        <div class="p-4 rounded-full ${role.color} text-white mb-4 group-hover:scale-110 transition">
+                            <i data-lucide="${role.icon}" class="w-10 h-10"></i>
+                        </div>
+                        <h3 class="text-2xl font-bold text-slate-800 mb-2">${role.title}</h3>
+                        <p class="text-center text-slate-600">${role.description}</p>
+                    </button>
+                `;
+            }
+
+            app.innerHTML = `
+                <div class="flex flex-col items-center w-full fade-in">
+                    <h2 class="text-3xl font-bold text-amber-900 mb-8">Choose Your Path</h2>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-5xl w-full">
+                        ${rolesHtml}
+                    </div>
+                    <button onclick="setScreen('start')" class="mt-8 text-amber-700 underline">Back</button>
+                </div>
+            `;
+        }
+
+        function renderGame() {
+            const roleData = ROLES[state.role];
+            const storyNode = STORY_DATA[state.role][state.nodeId];
+            
+            let contentHtml = '';
+
+            if (state.feedback) {
+                contentHtml = `
+                    <div class="mb-6 p-6 bg-amber-50 border-l-4 border-amber-500 rounded animate-fade-in">
+                        <p class="text-amber-900 font-medium text-lg">${state.feedback}</p>
+                    </div>
+                `;
+            } else {
+                let optionsHtml = storyNode.options.map((opt, idx) => `
+                    <button onclick="handleOption(${idx})" class="w-full text-left p-4 rounded-xl border-2 border-slate-200 hover:border-amber-500 hover:bg-amber-50 transition flex items-center justify-between group mb-4">
+                        <span class="font-semibold text-slate-700 group-hover:text-amber-900">${opt.text}</span>
+                        <i data-lucide="arrow-right" class="text-slate-300 group-hover:text-amber-500"></i>
+                    </button>
+                `).join('');
+                contentHtml = `<div class="space-y-4">${optionsHtml}</div>`;
+            }
+
+            app.innerHTML = `
+                <div class="max-w-2xl w-full bg-white rounded-2xl shadow-xl overflow-hidden fade-in">
+                    <div class="p-6 ${roleData.color} text-white flex justify-between items-center">
+                        <span class="font-bold text-lg flex items-center gap-2">
+                            <i data-lucide="${roleData.icon}"></i> ${roleData.title}
+                        </span>
+                        <span class="bg-white/20 px-3 py-1 rounded-full text-sm font-mono">Score: ${state.score}</span>
+                    </div>
+                    <div class="p-8">
+                        <h3 class="text-xl font-medium text-slate-800 mb-6 leading-relaxed">${storyNode.text}</h3>
+                        ${contentHtml}
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderTrading() {
+            const budget = 15;
+            const currentTotal = state.tradingCart.reduce((sum, item) => sum + item.cost, 0);
+            
+            let itemsHtml = TRADING_ITEMS.map((item, idx) => `
+                <button onclick="addToCart(${idx})" class="p-4 border-2 border-slate-200 rounded-xl hover:border-red-500 transition flex flex-col items-center">
+                    <span class="text-4xl mb-2">${item.img}</span>
+                    <span class="font-bold text-slate-700">${item.name}</span>
+                    <span class="text-red-600 font-mono text-sm">${item.cost} MB</span>
+                </button>
+            `).join('');
+
+            let cartHtml = state.tradingCart.map(i => `<span class="bg-white border px-2 py-1 rounded shadow-sm text-sm mr-2 mb-2 inline-block">${i.img} ${i.name}</span>`).join('');
+            if(state.tradingCart.length === 0) cartHtml = '<span class="text-slate-400 italic">Empty...</span>';
+
+            app.innerHTML = `
+                 <div class="bg-white p-8 rounded-2xl shadow-xl max-w-3xl w-full fade-in">
+                    <h2 class="text-2xl font-bold text-red-800 mb-2">The Trading Post</h2>
+                    <p class="text-slate-600 mb-6">Currency: <strong>Made Beaver (MB)</strong>. Limit: <strong>${budget} MB</strong></p>
+                    
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+                        ${itemsHtml}
+                    </div>
+
+                    <div class="bg-slate-50 p-4 rounded-xl mb-6 border border-slate-200">
+                        <div class="flex justify-between items-center mb-2">
+                            <h3 class="font-bold text-slate-700">Your Trade:</h3>
+                            <span class="font-mono font-bold text-lg ${currentTotal > budget ? 'text-red-600' : 'text-slate-700'}">${currentTotal} / ${budget} MB</span>
+                        </div>
+                        <div class="flex gap-2 flex-wrap min-h-[40px]">${cartHtml}</div>
+                    </div>
+
+                    <p id="trade-msg" class="text-center text-slate-800 font-medium mb-4 min-h-[1.5rem]">${state.feedback || "Select items to trade."}</p>
+
+                    <div class="flex gap-4">
+                        <button onclick="resetCart()" class="flex-1 py-3 text-slate-500 hover:bg-slate-100 rounded-lg font-bold">Reset</button>
+                        <button onclick="confirmTrade()" class="flex-2 w-full py-3 bg-red-700 text-white rounded-lg font-bold hover:bg-red-800 shadow-lg">Confirm Trade</button>
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderPacking() {
+            const items = [
+                { id: 'pemmican', label: 'Pemmican' },
+                { id: 'bread', label: 'Fresh Bread' },
+                { id: 'wool', label: 'Wool Coat' },
+                { id: 'cotton', label: 'Cotton Shirt' }
+            ];
+
+            let itemsHtml = items.map(item => {
+                const isSelected = state.packingItems.includes(item.id);
+                const style = isSelected ? 'border-blue-600 bg-blue-50 text-blue-900' : 'border-slate-200 text-slate-600 hover:border-blue-300';
+                return `<button onclick="togglePackItem('${item.id}')" class="p-6 rounded-xl border-2 text-lg font-bold transition ${style}">${item.label}</button>`;
+            }).join('');
+
+            app.innerHTML = `
+                <div class="bg-white p-8 rounded-2xl shadow-xl max-w-2xl w-full fade-in">
+                    <h2 class="text-2xl font-bold text-blue-800 mb-2">Pack Your Canoe</h2>
+                    <p class="text-slate-600 mb-6">Select the <strong>2 best items</strong> for a long journey.</p>
+                    <div class="grid grid-cols-2 gap-4 mb-6">${itemsHtml}</div>
+                    ${state.feedback ? `<div class="mb-4 p-3 bg-blue-100 text-blue-800 rounded text-center font-medium">${state.feedback}</div>` : ''}
+                    <button onclick="checkPacking()" class="w-full py-3 bg-blue-600 text-white rounded-lg font-bold hover:bg-blue-700 shadow-lg">Check Pack</button>
+                </div>
+            `;
+        }
+
+        function renderSummary() {
+            const isWin = state.score > 20;
+            app.innerHTML = `
+                <div class="max-w-md w-full bg-white p-8 rounded-2xl shadow-xl text-center fade-in">
+                    <div class="mb-6 flex justify-center">
+                         <i data-lucide="${isWin ? 'check-circle' : 'package'}" class="w-16 h-16 ${isWin ? 'text-green-500' : 'text-amber-600'}"></i>
+                    </div>
+                    <h2 class="text-3xl font-bold text-slate-800 mb-4">Journey Complete!</h2>
+                    <p class="text-slate-600 mb-6">
+                        You finished with a score of <span class="font-bold text-amber-600 text-xl">${state.score}</span>.
+                        ${isWin ? "You would have thrived in the fur trade!" : "Life was hard in the 1800s, but you learned a lot."}
+                    </p>
+                    <button onclick="setScreen('start')" class="w-full py-3 bg-amber-600 text-white rounded-lg font-bold hover:bg-amber-700 transition">Play Again</button>
+                </div>
+            `;
+        }
+
+        // --- LOGIC FUNCTIONS ---
+
+        function setScreen(screenName) {
+            state.screen = screenName;
+            state.feedback = null;
+            if(screenName === 'start') {
+                state.score = 0;
+                state.role = null;
+                state.nodeId = 1;
+            }
+            render();
+        }
+
+        function selectRole(role) {
+            state.role = role;
+            state.nodeId = 1;
+            state.score = 0;
+            state.screen = 'game';
+            render();
+        }
+
+        function handleOption(optionIdx) {
+            const node = STORY_DATA[state.role][state.nodeId];
+            const option = node.options[optionIdx];
+            
+            state.feedback = option.feedback;
+            if (option.feedback.toLowerCase().includes("correct") || option.feedback.toLowerCase().includes("good") || option.feedback.toLowerCase().includes("wise") || option.feedback.toLowerCase().includes("delicious")) {
+                state.score += 10;
+            }
+            render();
+
+            setTimeout(() => {
+                state.feedback = null;
+                if (option.nextId === 'success' || option.nextId === 'fail') {
+                    setScreen('summary');
+                } else if (option.nextId === 'trading_minigame') {
+                    state.tradingCart = [];
+                    setScreen('trading_minigame');
+                } else if (option.nextId === 'packing_minigame') {
+                    state.packingItems = [];
+                    setScreen('packing_minigame');
+                } else {
+                    state.nodeId = option.nextId;
+                    render();
+                }
+            }, 2500);
+        }
+
+        // Trading Logic
+        function addToCart(idx) {
+            const item = TRADING_ITEMS[idx];
+            const currentTotal = state.tradingCart.reduce((sum, i) => sum + i.cost, 0);
+            if (currentTotal + item.cost > 15) {
+                state.feedback = "Too expensive! Not enough credit.";
+            } else {
+                state.tradingCart.push(item);
+                state.feedback = `Added ${item.name}`;
+            }
+            render();
+        }
+
+        function resetCart() {
+            state.tradingCart = [];
+            state.feedback = "Cart cleared.";
+            render();
+        }
+
+        function confirmTrade() {
+            const total = state.tradingCart.reduce((sum, i) => sum + i.cost, 0);
+            if (total >= 10 && total <= 15) {
+                state.score += 20;
+                state.feedback = "Great trade! You maximized your value.";
+                render();
+                setTimeout(() => {
+                    state.nodeId = 3; 
+                    setScreen('game');
+                }, 1500);
+            } else if (total < 10) {
+                state.feedback = "You could have traded for more! Try to use closer to 15 tokens.";
+                render();
+            } else {
+                state.feedback = "Over budget!";
+                render();
+            }
+        }
+
+        // Packing Logic
+        function togglePackItem(id) {
+            if (state.packingItems.includes(id)) {
+                state.packingItems = state.packingItems.filter(i => i !== id);
+            } else if (state.packingItems.length < 2) {
+                state.packingItems.push(id);
+            }
+            render();
+        }
+
+        function checkPacking() {
+            const correctIds = ['pemmican', 'wool'];
+            const isCorrect = state.packingItems.length === 2 && state.packingItems.every(id => correctIds.includes(id));
+            
+            if (isCorrect) {
+                state.feedback = "Perfect packing! Ready for the river.";
+                state.score += 20;
+                render();
+                setTimeout(() => {
+                    state.nodeId = 1; // Back to loop or finish
+                    setScreen('summary'); // Ending for demo
+                }, 2000);
+            } else {
+                state.feedback = "Not quite. Think about energy and warmth.";
+                render();
+            }
+        }
+
+        // Init
+        render();
+
+    </script>
+</body>
+</html>
